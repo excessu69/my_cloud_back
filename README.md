@@ -79,6 +79,8 @@ DB_PORT=5432
 CREATE DATABASE mycloud;
 ```
 
+![mycloud](./mycloud-mycloud-public.png)
+
 ---
 
 ## 🔧 Миграции
