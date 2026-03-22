@@ -7,6 +7,8 @@ from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 from .permissions import IsAdminUserCustom
 from .serializers import (
@@ -15,11 +17,19 @@ from .serializers import (
     UserSerializer,
     UserListSerializer,
     UserAdminUpdateSerializer,
+    ChangePasswordSerializer,
+    ProfileUpdateSerializer,
 )
 
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
+
+
+@method_decorator(ensure_csrf_cookie, name='dispatch')
+class CsrfView(APIView):
+    def get(self, request):
+        return Response({'detail': 'CSRF cookie set'})
 
 
 class RegisterView(generics.CreateAPIView):
@@ -56,12 +66,25 @@ class LoginView(generics.GenericAPIView):
         }, status=status.HTTP_200_OK)
     
 
-class MeView(generics.RetrieveAPIView):
-    serializer_class = UserSerializer
+class MeView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.method in ['PUT', 'PATCH']:
+            return ProfileUpdateSerializer
+        return UserSerializer
 
     def get_object(self):
         return self.request.user
+
+    def perform_update(self, serializer):
+        user = serializer.save()
+        logger.info(
+            'Profile updated: user_id=%s username=%s full_name=%s',
+            user.id,
+            user.username,
+            user.full_name,
+        )
 
 
 class LogoutView(APIView):
@@ -129,3 +152,26 @@ class UserAdminUpdateView(generics.UpdateAPIView):
             user.id,
             user.is_staff,
         )
+
+class ChangePasswordView(generics.UpdateAPIView):
+    serializer_class = ChangePasswordSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+    def perform_update(self, serializer):
+        user = serializer.save()
+        logger.info(
+            'Password changed: user_id=%s username=%s',
+            user.id,
+            user.username,
+        )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response({'message': 'Пароль успешно изменен'}, status=status.HTTP_200_OK)

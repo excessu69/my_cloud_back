@@ -5,7 +5,7 @@ from django.contrib.auth import authenticate
 
 
 
-from .validators import validate_username
+from .validators import validate_username, validate_password
 
 User = get_user_model()
 
@@ -77,6 +77,7 @@ class UserListSerializer(serializers.ModelSerializer):
             'files_count',
             'files_total_size',
         )
+        read_only_fields = ['id', 'email', 'is_staff']
 
 
 class UserAdminUpdateSerializer(serializers.ModelSerializer):
@@ -84,5 +85,37 @@ class UserAdminUpdateSerializer(serializers.ModelSerializer):
         model = User
         fields = ('is_staff',)
 
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+
+    def validate_old_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Неверный старый пароль")
+        return value
+
+    def validate_new_password(self, value):
+        validate_password(value)
+        return value
+
+    def update(self, instance, validated_data):
+        instance.set_password(validated_data['new_password'])
+        instance.save()
+        return instance
+
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('username', 'full_name')
+
+    def validate_username(self, value):
+        user = self.instance
+        if User.objects.exclude(pk=user.pk).filter(username=value).exists():
+            raise serializers.ValidationError("Это имя пользователя уже занято.")
+        validate_username(value)
+        return value
 
 

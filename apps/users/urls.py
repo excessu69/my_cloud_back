@@ -1,4 +1,5 @@
 from django.urls import path
+from .views import RegisterView, LoginView, MeView, LogoutView, CsrfView
 
 from .views import (
     RegisterView,
@@ -8,6 +9,7 @@ from .views import (
     UserListView,
     UserDeleteView,
     UserAdminUpdateView,
+    ChangePasswordView,
 )
 
 urlpatterns = [
@@ -19,4 +21,6 @@ urlpatterns = [
     path('users/', UserListView.as_view(), name='users-list'),
     path('users/<int:id>/', UserAdminUpdateView.as_view(), name='users-update'),
     path('users/<int:id>/delete/', UserDeleteView.as_view(), name='users-delete'),
+    path('csrf/', CsrfView.as_view(), name='csrf'),
+    path('change-password/', ChangePasswordView.as_view(), name='change-password'),
 ]
