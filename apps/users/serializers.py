@@ -11,6 +11,11 @@ User = get_user_model()
 
 
 class RegisterSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для регистрации нового пользователя.
+
+    Валидирует username, password и создает пользователя.
+    """
     password = serializers.CharField(write_only=True)
 
     class Meta:
@@ -18,14 +23,23 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = ('username', 'email', 'full_name', 'password')
 
     def validate_username(self, value):
+        """
+        Валидирует username с помощью кастомного валидатора.
+        """
         validate_username(value)
         return value
 
     def validate_password(self, value):
+        """
+        Валидирует password с помощью Django валидаторов.
+        """
         validate_password(value)
         return value
 
     def create(self, validated_data):
+        """
+        Создает нового пользователя с хэшированным паролем.
+        """
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data.get('email'),
@@ -35,10 +49,18 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
     
 class LoginSerializer(serializers.Serializer):
+    """
+    Сериализатор для входа пользователя.
+
+    Аутентифицирует пользователя по username и password.
+    """
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
+        """
+        Валидирует credentials и аутентифицирует пользователя.
+        """
         user = authenticate(
             username=data.get('username'),
             password=data.get('password'),
@@ -52,15 +74,21 @@ class LoginSerializer(serializers.Serializer):
 
         data['user'] = user
         return data
-    
+
+
 class UserSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для профиля пользователя.
+    """
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'full_name', 'is_staff')
 
 
-
 class UserListSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для списка пользователей с дополнительной информацией о файлах.
+    """
     files_count = serializers.IntegerField(read_only=True)
     files_total_size = serializers.IntegerField(read_only=True)
 
@@ -81,37 +109,60 @@ class UserListSerializer(serializers.ModelSerializer):
 
 
 class UserAdminUpdateSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для обновления пользователя админом (только is_staff).
+    """
     class Meta:
         model = User
         fields = ('is_staff',)
 
 
 class ChangePasswordSerializer(serializers.Serializer):
+    """
+    Сериализатор для изменения пароля пользователя.
+
+    Валидирует старый пароль и устанавливает новый.
+    """
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
 
     def validate_old_password(self, value):
+        """
+        Проверяет, что старый пароль верный.
+        """
         user = self.context['request'].user
         if not user.check_password(value):
             raise serializers.ValidationError("Неверный старый пароль")
         return value
 
     def validate_new_password(self, value):
+        """
+        Валидирует новый пароль.
+        """
         validate_password(value)
         return value
 
     def update(self, instance, validated_data):
+        """
+        Устанавливает новый пароль и сохраняет пользователя.
+        """
         instance.set_password(validated_data['new_password'])
         instance.save()
         return instance
 
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для обновления профиля пользователя (username, full_name).
+    """
     class Meta:
         model = User
         fields = ('username', 'full_name')
 
     def validate_username(self, value):
+        """
+        Валидирует username на уникальность и формат.
+        """
         user = self.instance
         if User.objects.exclude(pk=user.pk).filter(username=value).exists():
             raise serializers.ValidationError("Это имя пользователя уже занято.")

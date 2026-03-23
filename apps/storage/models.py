@@ -5,6 +5,12 @@ from django.db import models
 
 
 class StoredFile(models.Model):
+    """
+    Модель для хранения информации о загруженных файлах пользователей.
+
+    Содержит метаданные файла, включая оригинальное и сохраненное имя,
+    путь, размер, комментарий, даты и токен для публичного доступа.
+    """
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

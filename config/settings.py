@@ -2,6 +2,7 @@ from pathlib import Path
 
 from config.env import get_env, get_env_bool, get_env_list
 
+import sys
 
 
 
@@ -82,8 +83,18 @@ DATABASES = {
         'HOST': get_env('DB_HOST', 'localhost'),
         'PORT': get_env('DB_PORT', '5432'),
     }
+
+    
 }
 
+
+if 'test' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators

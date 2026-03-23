@@ -23,10 +23,19 @@ logger = logging.getLogger(__name__)
 
 
 class FileListView(generics.ListAPIView):
+    """
+    View для получения списка файлов пользователя.
+
+    Админы могут запрашивать файлы других пользователей через query param user_id.
+    Обычные пользователи видят только свои файлы.
+    """
     serializer_class = StoredFileSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        """
+        Возвращает queryset файлов в зависимости от прав пользователя.
+        """
         user = self.request.user
         target_user_id = self.request.query_params.get('user_id')
 
@@ -47,10 +56,20 @@ class FileListView(generics.ListAPIView):
 
 
 class FileUploadView(generics.GenericAPIView):
+    """
+    View для загрузки файла пользователем.
+
+    Сохраняет файл на диск, создает запись в БД и логирует загрузку.
+    """
     serializer_class = FileUploadSerializer
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        """
+        Обрабатывает загрузку файла.
+
+        Валидирует данные, сохраняет файл и создает StoredFile объект.
+        """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -93,11 +112,19 @@ class FileUploadView(generics.GenericAPIView):
 
 
 class FileDeleteView(generics.DestroyAPIView):
+    """
+    View для удаления файла.
+
+    Удаляет файл с диска и из БД. Доступен владельцу или админу.
+    """
     queryset = StoredFile.objects.all()
     permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
     lookup_field = 'id'
 
     def perform_destroy(self, instance):
+        """
+        Удаляет файл с диска и логирует событие.
+        """
         absolute_path = os.path.join(settings.MEDIA_ROOT, instance.file_path)
 
         if os.path.exists(absolute_path):
@@ -114,12 +141,20 @@ class FileDeleteView(generics.DestroyAPIView):
 
 
 class FileUpdateView(generics.UpdateAPIView):
+    """
+    View для обновления файла (комментария).
+
+    Позволяет изменять комментарий к файлу. Доступен владельцу или админу.
+    """
     queryset = StoredFile.objects.all()
     serializer_class = FileUpdateSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
     lookup_field = 'id'
 
     def perform_update(self, serializer):
+        """
+        Обновляет файл и логирует изменения.
+        """
         file = serializer.save()
 
         logger.info(
@@ -132,6 +167,12 @@ class FileUpdateView(generics.UpdateAPIView):
 
 
 class FileDownloadView(generics.GenericAPIView):
+    """
+    View для скачивания файла.
+
+    Возвращает файл как attachment. Доступен владельцу или админу.
+    Обновляет дату последнего скачивания.
+    """
     permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
     lookup_field = 'id'
 
@@ -167,6 +208,13 @@ class FileDownloadView(generics.GenericAPIView):
 
 
 class FilePublicLinkView(APIView):
+    """
+    View для генерации публичной ссылки на файл.
+
+    POST: возвращает публичную ссылку.
+    GET: показывает ссылку (для совместимости).
+    Доступен владельцу или админу.
+    """
     permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
 
     def post(self, request, id):
@@ -215,6 +263,11 @@ class FilePublicLinkView(APIView):
 
 
 class PublicFileDownloadView(generics.GenericAPIView):
+    """
+    View для публичного скачивания файла по токену.
+
+    Не требует аутентификации, доступ по публичному токену.
+    """
     permission_classes = []
 
     def get(self, request, token):
