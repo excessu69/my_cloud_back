@@ -167,8 +167,9 @@ python manage.py runserver
 POST /api/auth/register/
 {
   "username": "testuser",
-  "password": "Password123!",
-  "full_name": "Тестовый Пользователь"
+  "email": "123@gmail.com",
+  "full_name": "Тестовый Пользователь",
+  "password": "Password123!"
 }
 ```
 
